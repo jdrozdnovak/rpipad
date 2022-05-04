@@ -1,8 +1,8 @@
-Add dtoverlay=dwc2 to the /boot/firmware/config.txt
-Add modules-load=dwc2 to the end of /boot/firmware/cmdline.txt
-Add libcomposite to /etc/modules
-Add denyinterfaces usb0 to /etc/dhcpcd.conf
-Install dnsmasq with sudo apt install dnsmasq
+Add dtoverlay=dwc2 to the /boot/firmware/config.txt\
+Add modules-load=dwc2 to the end of /boot/firmware/cmdline.txt\
+Add libcomposite to /etc/modules\
+Add denyinterfaces usb0 to /etc/dhcpcd.conf\
+Install dnsmasq with sudo apt install dnsmasq\
 Create /etc/dnsmasq.d/usb with following content
 ```
 interface=usb0
