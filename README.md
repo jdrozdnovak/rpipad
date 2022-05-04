@@ -1,9 +1,8 @@
-Add dtoverlay=dwc2 to the /boot/config.txt
-Add modules-load=dwc2 to the end of /boot/cmdline.txt
-If you have not already enabled ssh then create a empty file called ssh in /boot
+Add dtoverlay=dwc2 to the /boot/firmware/config.txt
+Add modules-load=dwc2 to the end of /boot/firmware/cmdline.txt
 Add libcomposite to /etc/modules
 Add denyinterfaces usb0 to /etc/dhcpcd.conf
-Install dnsmasq with sudo apt-get install dnsmasq
+Install dnsmasq with sudo apt install dnsmasq
 Create /etc/dnsmasq.d/usb with following content
 ```
 interface=usb0
@@ -12,13 +11,31 @@ dhcp-option=3
 leasefile-ro
 port=0
 ```
-Create /etc/network/interfaces.d/usb0 with the following content
+Edit available /etc/netplan/* config file
 ```
-auto usb0
-allow-hotplug usb0
-iface usb0 inet static
-  address 10.55.0.1
-  netmask 255.255.255.248
+network:
+  version: 2
+  renderer: networkd
+  wifis:
+    wlan0:
+      dhcp4: yes
+      dhcp6: no
+      access-points:
+        "my-ssid1":
+          password: "secret-preshared-key1"
+    wlan0:
+      dhcp4: yes
+      dhcp6: no
+      access-points:
+        "my-ssid2":
+          password: "secret-preshared-key2"
+  ethernets:
+    eth0:
+      dhcp4: true
+    usb0:
+      dhcp4: false
+      optional: true
+      addresses: [10.55.0.1/29]
 ```
 Create /root/usb.sh
 ```shell
@@ -35,7 +52,7 @@ echo 0x02 > bDeviceSubClass
 echo 0x01 > bDeviceProtocol
 mkdir -p strings/0x409
 echo "fedcba9876543211" > strings/0x409/serialnumber
-echo "Ben Hardill" > strings/0x409/manufacturer
+echo "Jan rpi" > strings/0x409/manufacturer
 echo "PI4 USB Device" > strings/0x409/product
 mkdir -p configs/c.1/strings/0x409
 echo "Config 1: ECM network" > configs/c.1/strings/0x409/configuration
@@ -48,8 +65,41 @@ echo $SELF > functions/ecm.usb0/dev_addr
 ln -s functions/ecm.usb0 configs/c.1/
 udevadm settle -t 5 || :
 ls /sys/class/udc > UDC
-ifup usb0
-service dnsmasq restart
+systemctl restart sshd
 ```
 Make /root/usb.sh executable with chmod +x /root/usb.sh
-Add /root/usb.sh to /etc/rc.local before exit 0 (I really should add a systemd startup script here at some point)
+Create rc-local.service
+```
+sudo vim /etc/systemd/system/rc-local.service
+```
+Copy in following text
+```
+[Unit]
+Description=/etc/rc.local Compatibility
+ConditionPathExists=/etc/rc.local
+
+[Service]
+Type=forking
+ExecStart=/etc/rc.local start
+TimeoutSec=0
+StandardOutput=tty
+RemainAfterExit=yes
+SysVStartPriority=99
+
+[Install]
+WantedBy=multi-user.target
+```
+Create /etc/rc.local file with following content
+```
+#!/bin/bash
+/root/usb.sh
+exit 0
+```
+Make it executable with 
+```
+sudo chmod +x /etc/rc.local
+```
+Enable rc-local
+```shell
+sudo systemctl enable --now rc-local
+```
